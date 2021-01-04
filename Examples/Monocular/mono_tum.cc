@@ -27,20 +27,19 @@
 #include<opencv2/core/core.hpp>
 
 #include<System.h>
-
+#include<unistd.h>
 using namespace std;
 
 void LoadImages(const string &strFile, vector<string> &vstrImageFilenames,
                 vector<double> &vTimestamps);
 
-int main(int argc, char **argv)
+int main2(int argc, char **argv)
 {
     if(argc != 4)
     {
         cerr << endl << "Usage: ./mono_tum path_to_vocabulary path_to_settings path_to_sequence" << endl;
         return 1;
     }
-
     // Retrieve paths to images
     vector<string> vstrImageFilenames;
     vector<double> vTimestamps;
@@ -64,6 +63,7 @@ int main(int argc, char **argv)
     cv::Mat im;
     for(int ni=0; ni<nImages; ni++)
     {
+        std::cout<<vstrImageFilenames[ni]<<std::endl;
         // Read image from file
         im = cv::imread(string(argv[3])+"/"+vstrImageFilenames[ni],CV_LOAD_IMAGE_UNCHANGED);
         double tframe = vTimestamps[ni];
@@ -101,8 +101,8 @@ int main(int argc, char **argv)
         else if(ni>0)
             T = tframe-vTimestamps[ni-1];
 
-        if(ttrack<T)
-            usleep((T-ttrack)*1e6);
+        if(vTimesTrack[ni]<T)
+            usleep((T-vTimesTrack[ni]));
     }
 
     // Stop all threads
@@ -121,6 +121,98 @@ int main(int argc, char **argv)
 
     // Save camera trajectory
     SLAM.SaveKeyFrameTrajectoryTUM("KeyFrameTrajectory.txt");
+
+    return 0;
+}
+int main(int argc, char **argv)
+{
+    if(argc != 4)
+    {
+        cerr << endl << "Usage: ./mono_tum path_to_vocabulary path_to_settings path_to_sequence" << endl;
+        return 1;
+    }
+    string img_save_dir="img";
+    if(img_save_dir[img_save_dir.size()-1]!='/')
+        img_save_dir+="/";
+    // Retrieve paths to images
+    vector<double> vTimestamps;
+    // Create SLAM system. It initializes all system threads and gets ready to process frames.
+    ORB_SLAM2::System SLAM(argv[1],argv[2],ORB_SLAM2::System::MONOCULAR,true,img_save_dir);
+
+    // Vector for tracking time statistics
+    vector<float> vTimesTrack;
+
+    cout << endl << "-------" << endl;
+    cout << "Start processing sequence ..." << endl;
+
+    // Main loop
+    cv::Mat im;
+    double tframe=0;
+    long frame_count=0;
+    cv::VideoCapture videoCapture(0);
+    if(!videoCapture.isOpened())
+    {
+        cout<<"videoCapture open failed"<<endl;
+        return 1;
+    }
+    //videoCapture.set(CV_CAP_PROP_FRAME_WIDTH, 1080);//宽度
+    //videoCapture.set(CV_CAP_PROP_FRAME_HEIGHT, 960);//高度
+    videoCapture.set(CV_CAP_PROP_FPS, 60);//帧率 帧/秒
+    while(videoCapture.isOpened())
+    {
+        // Read image from file
+        videoCapture >> im;
+        frame_count++;
+        if(frame_count%5!=0)
+            continue;
+        tframe++;
+        if(im.empty())
+        {
+            cout<<"videoCapture get mat failed"<<endl;
+            return 1;
+        }
+
+#ifdef COMPILEDWITHC11
+        std::chrono::steady_clock::time_point t1 = std::chrono::steady_clock::now();
+#else
+        std::chrono::monotonic_clock::time_point t1 = std::chrono::monotonic_clock::now();
+#endif
+
+        // Pass the image to the SLAM system
+        SLAM.TrackMonocular(im,tframe);
+
+#ifdef COMPILEDWITHC11
+        std::chrono::steady_clock::time_point t2 = std::chrono::steady_clock::now();
+#else
+        std::chrono::monotonic_clock::time_point t2 = std::chrono::monotonic_clock::now();
+#endif
+
+        double ttrack= std::chrono::duration_cast<std::chrono::duration<double> >(t2 - t1).count();
+
+        vTimesTrack.push_back(ttrack);
+        usleep(1000);
+        if(cv::waitKey(50)=='q'){
+            videoCapture.release();
+            break;
+        }
+    }
+
+    // Stop all threads
+    SLAM.Shutdown();
+
+    // Tracking time statistics
+    sort(vTimesTrack.begin(),vTimesTrack.end());
+    float totaltime = 0;
+    for(float nf : vTimesTrack)
+    {
+        totaltime+=nf;
+    }
+    cout << "-------" << endl << endl;
+    cout << "median tracking time: " << vTimesTrack[vTimesTrack.size()/2] << endl;
+    cout << "mean tracking time: " << totaltime/vTimesTrack.size() << endl;
+
+    // Save camera trajectory
+    SLAM.SaveKeyFrameTrajectoryTUM(img_save_dir+"KeyFrameTrajectory.txt");
 
     return 0;
 }

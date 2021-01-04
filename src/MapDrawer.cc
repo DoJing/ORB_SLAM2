@@ -87,7 +87,12 @@ void MapDrawer::DrawKeyFrames(const bool bDrawKF, const bool bDrawGraph)
     const float z = w*0.6;
 
     const vector<KeyFrame*> vpKFs = mpMap->GetAllKeyFrames();
-
+//    if(vpKFs.size()>0) {
+//        for (size_t i = 0; i < vpKFs.size(); i++) {
+//            std::cout << vpKFs[i]->mTimeStamp << ",";
+//        }
+//        std::cout << endl;
+//    }
     if(bDrawKF)
     {
         for(size_t i=0; i<vpKFs.size(); i++)
