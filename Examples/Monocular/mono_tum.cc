@@ -137,7 +137,8 @@ int main(int argc, char **argv)
     // Retrieve paths to images
     vector<double> vTimestamps;
     // Create SLAM system. It initializes all system threads and gets ready to process frames.
-    ORB_SLAM2::System SLAM(argv[1],argv[2],ORB_SLAM2::System::MONOCULAR,true,img_save_dir);
+    string settingsFile = argv[2];
+    ORB_SLAM2::System SLAM(argv[1],settingsFile,ORB_SLAM2::System::MONOCULAR,true,img_save_dir);
 
     // Vector for tracking time statistics
     vector<float> vTimesTrack;
@@ -155,9 +156,15 @@ int main(int argc, char **argv)
         cout<<"videoCapture open failed"<<endl;
         return 1;
     }
-    //videoCapture.set(CV_CAP_PROP_FRAME_WIDTH, 1080);//宽度
-    //videoCapture.set(CV_CAP_PROP_FRAME_HEIGHT, 960);//高度
-    videoCapture.set(CV_CAP_PROP_FPS, 60);//帧率 帧/秒
+    cv::FileStorage fSettings(settingsFile, cv::FileStorage::READ);
+    int cap_width = fSettings["Camera.width"];
+    int cap_height = fSettings["Camera.height"];
+    bool set_w = videoCapture.set(CV_CAP_PROP_FRAME_WIDTH, cap_width);//宽度
+    bool set_h = videoCapture.set(CV_CAP_PROP_FRAME_HEIGHT, cap_height);//高度
+    bool set_fps = videoCapture.set(CV_CAP_PROP_FPS, 60);//帧率 帧/秒
+    cout<<set_w<<" "<<set_h<<" "<<set_fps<<endl;
+    videoCapture >> im;
+    cout<<im.cols<<" "<<im.rows<<endl;
     while(videoCapture.isOpened())
     {
         // Read image from file

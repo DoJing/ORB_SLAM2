@@ -4,7 +4,7 @@ project(ORB_SLAM2)
 #IF(NOT CMAKE_BUILD_TYPE)
 #  SET(CMAKE_BUILD_TYPE Debug)
 #ENDIF()
-SET(CMAKE_BUILD_TYPE Debug)
+SET(CMAKE_BUILD_TYPE Release)
 MESSAGE("Build type: " ${CMAKE_BUILD_TYPE})
 
 set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS}  -Wall  -O3 -march=native ")

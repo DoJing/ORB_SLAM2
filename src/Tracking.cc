@@ -239,25 +239,25 @@ cv::Mat Tracking::GrabImageMonocular(const cv::Mat &im, const double &timestamp)
 {
     mImColor = im;
 
-    if(mImColor.channels()==3)
-    {
-        if(mbRGB)
-            cvtColor(mImColor,mImGray,CV_RGB2GRAY);
-        else
-            cvtColor(mImColor,mImGray,CV_BGR2GRAY);
-    }
-    else if(mImColor.channels()==4)
-    {
-        if(mbRGB)
-            cvtColor(mImColor,mImGray,CV_RGBA2GRAY);
-        else
-            cvtColor(mImColor,mImGray,CV_BGRA2GRAY);
-    }
+//    if(mImColor.channels()==3)
+//    {
+//        if(mbRGB)
+//            cvtColor(mImColor,mImGray,CV_RGB2GRAY);
+//        else
+//            cvtColor(mImColor,mImGray,CV_BGR2GRAY);
+//    }
+//    else if(mImColor.channels()==4)
+//    {
+//        if(mbRGB)
+//            cvtColor(mImColor,mImGray,CV_RGBA2GRAY);
+//        else
+//            cvtColor(mImColor,mImGray,CV_BGRA2GRAY);
+//    }
 
     if(mState==NOT_INITIALIZED || mState==NO_IMAGES_YET)
-        mCurrentFrame = Frame(mImGray,timestamp,mpIniORBextractor,mpORBVocabulary,mK,mDistCoef,mbf,mThDepth);
+        mCurrentFrame = Frame(mImColor,timestamp,mpIniORBextractor,mpORBVocabulary,mK,mDistCoef,mbf,mThDepth);
     else
-        mCurrentFrame = Frame(mImGray,timestamp,mpORBextractorLeft,mpORBVocabulary,mK,mDistCoef,mbf,mThDepth);
+        mCurrentFrame = Frame(mImColor,timestamp,mpORBextractorLeft,mpORBVocabulary,mK,mDistCoef,mbf,mThDepth);
 
     Track();
 
