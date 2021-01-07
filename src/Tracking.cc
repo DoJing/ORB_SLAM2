@@ -574,13 +574,16 @@ void Tracking::MonocularInitialization()
             for(size_t i=0; i<mCurrentFrame.mvKeysUn.size(); i++)
                 mvbPrevMatched[i]=mCurrentFrame.mvKeysUn[i].pt;
 
-            if(mpInitializer)
-                delete mpInitializer;
+//            if(mpInitializer)
+//                delete mpInitializer;
 
             mpInitializer =  new Initializer(mCurrentFrame,1.0,200);
-
             fill(mvIniMatches.begin(),mvIniMatches.end(),-1);
 
+            char ss[10];
+            sprintf(ss,"%05d",int(mInitialFrame.mTimeStamp));
+            std::string name = mpSystem->mImgDir+ss;
+            cv::imwrite(name+".jpg",mImColor);
             return;
         }
     }
@@ -592,6 +595,10 @@ void Tracking::MonocularInitialization()
             delete mpInitializer;
             mpInitializer = static_cast<Initializer*>(NULL);
             fill(mvIniMatches.begin(),mvIniMatches.end(),-1);
+            char ss[10];
+            sprintf(ss,"%05d",int(mInitialFrame.mTimeStamp));
+            std::string name = mpSystem->mImgDir+ss;
+            remove(name.c_str());
             return;
         }
 
@@ -604,6 +611,10 @@ void Tracking::MonocularInitialization()
         {
             delete mpInitializer;
             mpInitializer = static_cast<Initializer*>(NULL);
+            char ss[10];
+            sprintf(ss,"%05d",int(mInitialFrame.mTimeStamp));
+            std::string name = mpSystem->mImgDir+ss;
+            remove(name.c_str());
             return;
         }
 
@@ -630,6 +641,10 @@ void Tracking::MonocularInitialization()
             mCurrentFrame.SetPose(Tcw);
 
             CreateInitialMapMonocular();
+            char ss[10];
+            sprintf(ss,"%05d",int(mCurrentFrame.mTimeStamp));
+            string name = mpSystem->mImgDir+ss;
+            cv::imwrite(name+".jpg",mImColor);
         }
     }
 }
@@ -1066,7 +1081,9 @@ void Tracking::CreateNewKeyFrame()
         return;
 
     KeyFrame* pKF = new KeyFrame(mCurrentFrame,mpMap,mpKeyFrameDB);
-    std::string name = mpSystem->mImgDir+std::to_string(int(mCurrentFrame.mTimeStamp));
+    char ss[10];
+    sprintf(ss,"%05d",int(mCurrentFrame.mTimeStamp));
+    std::string name = mpSystem->mImgDir+ss;
     cv::imwrite(name+".jpg",mImColor);
     mpReferenceKF = pKF;
     mCurrentFrame.mpReferenceKF = pKF;

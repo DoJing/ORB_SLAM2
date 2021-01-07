@@ -159,18 +159,20 @@ int main(int argc, char **argv)
     cv::FileStorage fSettings(settingsFile, cv::FileStorage::READ);
     int cap_width = fSettings["Camera.width"];
     int cap_height = fSettings["Camera.height"];
+    double cap_fps = fSettings["Camera.fps"];
     bool set_w = videoCapture.set(CV_CAP_PROP_FRAME_WIDTH, cap_width);//宽度
     bool set_h = videoCapture.set(CV_CAP_PROP_FRAME_HEIGHT, cap_height);//高度
-    bool set_fps = videoCapture.set(CV_CAP_PROP_FPS, 60);//帧率 帧/秒
+    bool set_fps = videoCapture.set(CV_CAP_PROP_FPS, cap_fps);//帧率 帧/秒
+    int get_fps = videoCapture.get(CV_CAP_PROP_FPS);
     cout<<set_w<<" "<<set_h<<" "<<set_fps<<endl;
     videoCapture >> im;
-    cout<<im.cols<<" "<<im.rows<<endl;
+    cout<<im.cols<<" "<<im.rows<<" "<<get_fps<<endl;
     while(videoCapture.isOpened())
     {
         // Read image from file
         videoCapture >> im;
         frame_count++;
-        if(frame_count%5!=0)
+        if(frame_count%(get_fps/4)!=0)
             continue;
         tframe++;
         if(im.empty())
