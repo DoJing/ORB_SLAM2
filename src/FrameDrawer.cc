@@ -20,7 +20,7 @@
 
 #include "FrameDrawer.h"
 #include "Tracking.h"
-
+#include "TrianglePlanes.h"
 #include <opencv2/core/core.hpp>
 #include <opencv2/highgui/highgui.hpp>
 
@@ -34,7 +34,36 @@ FrameDrawer::FrameDrawer(Map* pMap):mpMap(pMap)
     mState=Tracking::SYSTEM_NOT_READY;
     mIm = cv::Mat(480,640,CV_8UC3, cv::Scalar(0,0,0));
 }
-
+cv::Scalar HSV2BGR(float d){
+    float h,s,v;
+    h = 110;
+    s = d;
+    v = d;
+    float r,g,b;
+    if (s == 0) {
+        r = g = b = v;
+    }
+    else {
+        h /= 60;
+        int offset = floor(h);
+        float f = h - offset;
+        float p = v * (1 - s);
+        float q = v * (1 - s * f);
+        float t = v * (1 - s * (1 - f));
+        switch (offset)
+        {
+            case 0: r = v; g = t; b = p; break;
+            case 1: r = q; g = v; b = p; break;
+            case 2: r = p; g = v; b = t; break;
+            case 3: r = p; g = q; b = v; break;
+            case 4: r = t; g = p; b = v; break;
+            case 5: r = v; g = p; b = q; break;
+            default:
+                break;
+        }
+    }
+    return {b,g,r};
+}
 cv::Mat FrameDrawer::DrawFrame()
 {
     cv::Mat im;
@@ -92,6 +121,8 @@ cv::Mat FrameDrawer::DrawFrame()
         mnTrackedVO=0;
         const float r = 5;
         const int n = vCurrentKeys.size();
+        vector<support_pt> p_support;
+        vector<float> deep;
         for(int i=0;i<n;i++)
         {
             if(vbVO[i] || vbMap[i])
@@ -105,16 +136,41 @@ cv::Mat FrameDrawer::DrawFrame()
                 // This is a match to a MapPoint in the map
                 if(vbMap[i])
                 {
-                    cv::rectangle(im,pt1,pt2,cv::Scalar(0,255,0));
-                    cv::circle(im,vCurrentKeys[i].pt,2,cv::Scalar(0,255,0),-1);
+                    float d = sqrt(mMapPoint[i].z*mMapPoint[i].z+mMapPoint[i].y*mMapPoint[i].y+mMapPoint[i].x*mMapPoint[i].x);
+                    p_support.emplace_back(support_pt(vCurrentKeys[i].pt.x,vCurrentKeys[i].pt.y,d));
+                    deep.emplace_back(d);
+                    //cv::rectangle(im,pt1,pt2,cv::Scalar(0,255,0));
+                    //cv::circle(im,vCurrentKeys[i].pt,2,cv::Scalar(0,255,0),-1);
                     mnTracked++;
                 }
                 else // This is match to a "visual odometry" MapPoint created in the last frame
                 {
-                    cv::rectangle(im,pt1,pt2,cv::Scalar(255,0,0));
-                    cv::circle(im,vCurrentKeys[i].pt,2,cv::Scalar(255,0,0),-1);
+                    //cv::rectangle(im,pt1,pt2,cv::Scalar(255,0,0));
+                    //cv::circle(im,vCurrentKeys[i].pt,2,cv::Scalar(255,0,0),-1);
                     mnTrackedVO++;
                 }
+            }
+        }
+        if(p_support.size()>10) {
+            sort(deep.begin(),deep.end());
+            float d_min=deep[deep.size()*0.05];
+            float d_max=deep[deep.size()*0.95];
+            for (auto &pt :p_support) {
+                pt.d = (pt.d - d_max) / (d_min - d_max) * 255;
+                pt.d = fmax(pt.d,0);
+                pt.d = fmin(pt.d,255);
+            }
+            vector<Triangle> triangle = ComputeDelaunayTriangulation(p_support);
+            for(auto &tri : triangle){
+                int32_t c1 = tri.c1;
+                int32_t c2 = tri.c2;
+                int32_t c3 = tri.c3;
+                float d = (p_support[c1].d+p_support[c2].d)/2;
+                cv::line(im,cv::Point(p_support[c1].u,p_support[c1].v),cv::Point(p_support[c2].u,p_support[c2].v),HSV2BGR(d));
+                d = (p_support[c2].d+p_support[c3].d)/2;
+                cv::line(im,cv::Point(p_support[c2].u,p_support[c2].v),cv::Point(p_support[c3].u,p_support[c3].v),HSV2BGR(d));
+                d = (p_support[c3].d+p_support[c1].d)/2;
+                cv::line(im,cv::Point(p_support[c3].u,p_support[c3].v),cv::Point(p_support[c1].u,p_support[c1].v),HSV2BGR(d));
             }
         }
     }
@@ -172,6 +228,7 @@ void FrameDrawer::Update(Tracking *pTracker)
     N = mvCurrentKeys.size();
     mvbVO = vector<bool>(N,false);
     mvbMap = vector<bool>(N,false);
+    mMapPoint = vector<cv::Point3f>(N,cv::Point3f(0,0,0));
     mbOnlyTracking = pTracker->mbOnlyTracking;
 
 
@@ -189,8 +246,10 @@ void FrameDrawer::Update(Tracking *pTracker)
             {
                 if(!pTracker->mCurrentFrame.mvbOutlier[i])
                 {
-                    if(pMP->Observations()>0)
-                        mvbMap[i]=true;
+                    if(pMP->Observations()>0) {
+                        mvbMap[i] = true;
+                        mMapPoint[i] = cv::Point3f(pMP->GetWorldPos());
+                    }
                     else
                         mvbVO[i]=true;
                 }
