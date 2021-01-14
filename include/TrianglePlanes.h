@@ -8,5 +8,6 @@
 #include <opencv2/opencv.hpp>
 std::vector<Triangle> ComputeDelaunayTriangulation (std::vector<support_pt> p_support);
 void ComputePlanes (const std::vector<support_pt>& p_support,std::vector<Triangle> &triangles);
-void ComputeDeepth(const std::vector<support_pt>& p_support,const std::vector<Triangle>& tri,cv::Mat& deep);
+void ComputeDeepth(const std::vector<support_pt>& img_support,const std::vector<Triangle>& tri,cv::Mat& deep);
+void ComputeNormal(const std::vector<support_pt>& img_support,const std::vector<Triangle>& tri,cv::Mat& normal);
 #endif //TRIANGLE_TRIANGLEPLANES_H

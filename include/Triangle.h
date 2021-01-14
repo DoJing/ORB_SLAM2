@@ -251,14 +251,14 @@
 #ifndef TRIANGLE_TRIANGLE_H
 #define TRIANGLE_TRIANGLE_H
 struct support_pt {
-    int u;
-    int v;
-    float d;
-    support_pt(int u,int v,float d):u(u),v(v),d(d){}
+    float x;
+    float y;
+    float z;
+    support_pt(float _x,float _y,float _z): x(_x), y(_y), z(_z){}
 };
 struct Triangle {
     int c1,c2,c3;
-    float   t1a{},t1b{},t1c{};
+    float   t1a{},t1b{},t1c{}; //t1a*x+t1b*y+t1c*z+1=0
     Triangle(int c1,int c2,int c3):c1(c1),c2(c2),c3(c3){}
 };
 struct triangulateio {

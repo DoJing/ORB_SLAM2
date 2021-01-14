@@ -121,7 +121,7 @@ cv::Mat FrameDrawer::DrawFrame()
         mnTrackedVO=0;
         const float r = 5;
         const int n = vCurrentKeys.size();
-        vector<support_pt> p_support;
+        vector<support_pt> img_support,map_support;
         vector<float> deep;
         for(int i=0;i<n;i++)
         {
@@ -137,8 +137,9 @@ cv::Mat FrameDrawer::DrawFrame()
                 if(vbMap[i])
                 {
                     float d = sqrt(mMapPoint[i].z*mMapPoint[i].z+mMapPoint[i].y*mMapPoint[i].y+mMapPoint[i].x*mMapPoint[i].x);
-                    p_support.emplace_back(support_pt(vCurrentKeys[i].pt.x,vCurrentKeys[i].pt.y,d));
                     deep.emplace_back(d);
+                    img_support.emplace_back(support_pt(round(vCurrentKeys[i].pt.x),round(vCurrentKeys[i].pt.y),d));
+                    map_support.emplace_back(support_pt(mMapPoint[i].x,mMapPoint[i].y,mMapPoint[i].z));
                     //cv::rectangle(im,pt1,pt2,cv::Scalar(0,255,0));
                     //cv::circle(im,vCurrentKeys[i].pt,2,cv::Scalar(0,255,0),-1);
                     mnTracked++;
@@ -151,26 +152,28 @@ cv::Mat FrameDrawer::DrawFrame()
                 }
             }
         }
-        if(p_support.size()>10) {
+        if(img_support.size()>10) {
             sort(deep.begin(),deep.end());
             float d_min=deep[deep.size()*0.05];
             float d_max=deep[deep.size()*0.95];
-            for (auto &pt :p_support) {
-                pt.d = (pt.d - d_max) / (d_min - d_max) * 255;
-                pt.d = fmax(pt.d,0);
-                pt.d = fmin(pt.d,255);
+            for (auto &pt :img_support) {
+                pt.z = (pt.z - d_max) / (d_min - d_max) * 255;
+                pt.z = fmax(pt.z,0);
+                pt.z = fmin(pt.z,255);
             }
-            vector<Triangle> triangle = ComputeDelaunayTriangulation(p_support);
+            vector<Triangle> triangle = ComputeDelaunayTriangulation(img_support);
+            ComputePlanes(map_support,triangle);
+            ComputeNormal(img_support,triangle,im);
             for(auto &tri : triangle){
                 int32_t c1 = tri.c1;
                 int32_t c2 = tri.c2;
                 int32_t c3 = tri.c3;
-                float d = (p_support[c1].d+p_support[c2].d)/2;
-                cv::line(im,cv::Point(p_support[c1].u,p_support[c1].v),cv::Point(p_support[c2].u,p_support[c2].v),HSV2BGR(d));
-                d = (p_support[c2].d+p_support[c3].d)/2;
-                cv::line(im,cv::Point(p_support[c2].u,p_support[c2].v),cv::Point(p_support[c3].u,p_support[c3].v),HSV2BGR(d));
-                d = (p_support[c3].d+p_support[c1].d)/2;
-                cv::line(im,cv::Point(p_support[c3].u,p_support[c3].v),cv::Point(p_support[c1].u,p_support[c1].v),HSV2BGR(d));
+                float d = (img_support[c1].z+img_support[c2].z)/2;
+                cv::line(im,cv::Point(img_support[c1].x,img_support[c1].y),cv::Point(img_support[c2].x,img_support[c2].y),HSV2BGR(d));
+                d = (img_support[c2].z+img_support[c3].z)/2;
+                cv::line(im,cv::Point(img_support[c2].x,img_support[c2].y),cv::Point(img_support[c3].x,img_support[c3].y),HSV2BGR(d));
+                d = (img_support[c3].z+img_support[c1].z)/2;
+                cv::line(im,cv::Point(img_support[c3].x,img_support[c3].y),cv::Point(img_support[c1].x,img_support[c1].y),HSV2BGR(d));
             }
         }
     }
